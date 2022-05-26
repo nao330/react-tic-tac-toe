@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import ReactDOM from 'react-dom/client';
 import './index.css';
 
@@ -31,88 +31,72 @@ function HistoryButtons(props) {
 function Board(props) {
     const board = [...Array(3)].map((_, i) =>
         [...Array(3)].map((_, j) => i * 3 + j)
-        .map((j, _) => (
-            <Square
-                value={props.squares[j]}
-                onClick={() => props.onClick(j)}
-            />
-        ))
-    ).map((line) => (<div className='board-row'>{line}</div>));
+            .map((j, _) => (
+                <Square
+                    key={j}
+                    value={props.squares[j]}
+                    onClick={() => props.onClick(j)}
+                />
+            ))
+    ).map((line, i) => (<div className='board-row' key={i}>{line}</div>));
 
     return (<div>{board}</div>);
 }
 
-class Game extends React.Component {
-    constructor(props) {
-        super(props);
-        this.state = {
-            history: [{
-                squares: Array(9).fill(null),
-            }],
-            stepNumber: 0,
-            xIsNext: true,
-        };
-    }
+function Game(props) {
+    const [history, setHistory] = useState([{ squares: Array(9).fill(null) }]);
+    const [stepNumber, setStepNumber] = useState(0);
+    const [xIsNext, setXIsNext] = useState(true);
 
-    getNextSymbol() {
-        return this.state.xIsNext ? 'X' : 'O';
-    }
-
-    handleClick(i) {
-        const history = this.state.history.slice(0, this.state.stepNumber + 1);
-        const current = history[history.length - 1];
+    const getNextSymbol = () => xIsNext ? 'X' : 'O';
+    const handleClick = (i) => {
+        const historyCopy = history.slice(0, stepNumber + 1);
+        const current = historyCopy[historyCopy.length - 1];
         const squares = current.squares.slice();
         if (calculateWinner(squares) || squares[i]) return;
 
-        squares[i] = this.getNextSymbol();
-        this.setState({
-            history: history.concat([{ squares: squares, }]),
-            stepNumber: history.length,
-            xIsNext: !this.state.xIsNext,
-        });
-    }
+        squares[i] = getNextSymbol();
+        setHistory(historyCopy.concat([{ squares: squares, }]));
+        setStepNumber(historyCopy.length);
+        setXIsNext(!xIsNext);
+    };
 
-    jumpTo(step) {
-        this.setState({
-            stepNumber: step,
-            xIsNext: (step % 2) === 0,
-        });
-    }
+    const jumpTo = (step) => {
+        setStepNumber(step);
+        setXIsNext((step % 2) === 0);
+    };
 
-    getStatusMessage(squares) {
+    const getStatusMessage = (squares) => {
         const winner = calculateWinner(squares);
         if (winner) {
             return 'Winner: ' + winner;
         } else {
-            return 'Next player: ' + this.getNextSymbol();
+            return 'Next player: ' + getNextSymbol();
         }
-    }
+    };
 
-    render() {
-        const history = this.state.history;
-        const current = history[this.state.stepNumber];
-        const status = this.getStatusMessage(current.squares);
+    const current = history[stepNumber];
+    const status = getStatusMessage(current.squares);
 
-        return (
-            <div className="game">
-                <div className="game-board">
-                    <Board
-                        squares={current.squares}
-                        onClick={(i) => this.handleClick(i)}
+    return (
+        <div className="game">
+            <div className="game-board">
+                <Board
+                    squares={current.squares}
+                    onClick={(i) => handleClick(i)}
+                />
+            </div>
+            <div className="game-info">
+                <div>{status}</div>
+                <div>
+                    <HistoryButtons
+                        historyLength={history.length}
+                        onClick={(i) => jumpTo(i)}
                     />
                 </div>
-                <div className="game-info">
-                    <div>{status}</div>
-                    <div>
-                        <HistoryButtons
-                            historyLength={history.length}
-                            onClick={(i) => this.jumpTo(i)}
-                        />
-                    </div>
-                </div>
             </div>
-        );
-    }
+        </div>
+    );
 }
 
 function calculateWinner(squares) {
